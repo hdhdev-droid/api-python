@@ -1,0 +1,6 @@
+# API Server (Python) - Node.js api-server 마이그레이션
+python-dotenv>=1.0.0
+Flask>=3.0.0
+psycopg2-binary>=2.9.9
+PyMySQL>=1.1.0
+pymongo>=4.6.0

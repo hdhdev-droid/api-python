@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Server - 샘플</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 2rem;
+      background: #f5f5f5;
+      color: #333;
+    }
+    h1 { margin-top: 0; color: #1a1a2e; }
+    section {
+      background: #fff;
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    section h2 { margin: 0 0 0.75rem; font-size: 1rem; color: #555; }
+    button, input[type="submit"] {
+      background: #4361ee;
+      color: #fff;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    button:hover, input[type="submit"]:hover { background: #3a56d4; }
+    input[type="text"] {
+      padding: 0.5rem;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      margin-right: 0.5rem;
+      width: 200px;
+    }
+    pre {
+      background: #1a1a2e;
+      color: #e2e8f0;
+      padding: 1rem;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      margin: 0.5rem 0 0;
+    }
+    .row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .muted { color: #888; font-size: 0.85rem; }
+    .link { color: #4361ee; text-decoration: none; }
+    .link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <h1>API Server 샘플</h1>
+  <p class="muted">아래 버튼으로 API를 호출해 보세요.</p>
+  <p><a class="link" href="/">← 메인 페이지 (DB 테이블 목록)</a></p>
+
+  <section>
+    <h2>헬스 체크</h2>
+    <button type="button" id="btnHealth">Health Check</button>
+    <pre id="outHealth">결과가 여기 표시됩니다.</pre>
+  </section>
+
+  <section>
+    <h2>아이템 목록</h2>
+    <button type="button" id="btnItems">목록 가져오기</button>
+    <pre id="outItems">결과가 여기 표시됩니다.</pre>
+  </section>
+
+  <section>
+    <h2>아이템 추가</h2>
+    <form id="formItem">
+      <div class="row">
+        <input type="text" name="name" placeholder="이름" required>
+        <input type="submit" value="추가">
+      </div>
+    </form>
+    <pre id="outPost">결과가 여기 표시됩니다.</pre>
+  </section>
+
+  <script>
+    const base = window.location.origin;
+
+    document.getElementById('btnHealth').onclick = async () => {
+      const el = document.getElementById('outHealth');
+      el.textContent = '요청 중...';
+      try {
+        const res = await fetch(base + '/api/health');
+        const data = await res.json();
+        el.textContent = JSON.stringify(data, null, 2);
+      } catch (e) {
+        el.textContent = 'Error: ' + e.message;
+      }
+    };
+
+    document.getElementById('btnItems').onclick = async () => {
+      const el = document.getElementById('outItems');
+      el.textContent = '요청 중...';
+      try {
+        const res = await fetch(base + '/api/items');
+        const data = await res.json();
+        el.textContent = JSON.stringify(data, null, 2);
+      } catch (e) {
+        el.textContent = 'Error: ' + e.message;
+      }
+    };
+
+    document.getElementById('formItem').onsubmit = async (e) => {
+      e.preventDefault();
+      const el = document.getElementById('outPost');
+      const name = e.target.name.value.trim();
+      el.textContent = '요청 중...';
+      try {
+        const res = await fetch(base + '/api/items', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name }),
+        });
+        const data = await res.json();
+        el.textContent = JSON.stringify(data, null, 2);
+        e.target.name.value = '';
+      } catch (err) {
+        el.textContent = 'Error: ' + err.message;
+      }
+    };
+  </script>
+</body>
+</html>

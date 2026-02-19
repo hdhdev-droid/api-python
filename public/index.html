@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Server - 메인</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2rem;
+      background: #f0f2f5;
+      color: #1a1a2e;
+    }
+    h1 { margin-top: 0; }
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .card h2 { margin: 0 0 1rem; font-size: 1.1rem; color: #333; }
+    .status { display: inline-flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .status-dot.ok { background: #22c55e; }
+    .status-dot.error { background: #ef4444; }
+    .status-dot.pending { background: #94a3b8; animation: pulse 1s ease-in-out infinite; }
+    @keyframes pulse { 50% { opacity: 0.5; } }
+    ul.tables { margin: 0; padding-left: 1.25rem; }
+    ul.tables li { margin: 0.35rem 0; }
+    .message { color: #64748b; font-size: 0.95rem; }
+    .error-msg { color: #dc2626; background: #fef2f2; padding: 0.75rem; border-radius: 6px; font-size: 0.9rem; }
+    .link { color: #4361ee; text-decoration: none; }
+    .link:hover { text-decoration: underline; }
+    table.env-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    table.env-table th, table.env-table td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid #eee; }
+    table.env-table th { color: #64748b; font-weight: 500; width: 140px; }
+    table.env-table td { font-family: ui-monospace, monospace; word-break: break-all; }
+    table.env-table .value-empty { color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <h1>API Server</h1>
+  <div class="card">
+    <h2>DB 환경 변수</h2>
+    <div id="envContent">
+      <p class="message">불러오는 중...</p>
+    </div>
+  </div>
+  <div class="card">
+    <h2>DB 테이블 목록</h2>
+    <div class="status">
+      <span class="status-dot pending" id="statusDot"></span>
+      <span id="statusText">연결 중...</span>
+    </div>
+    <div id="content">
+      <p class="message">불러오는 중...</p>
+    </div>
+  </div>
+  <p>
+    <a class="link" href="/sample">샘플 API 테스트 페이지</a>
+  </p>
+
+  <script>
+    (async () => {
+      const statusDot = document.getElementById('statusDot');
+      const statusText = document.getElementById('statusText');
+      const content = document.getElementById('content');
+      const envContent = document.getElementById('envContent');
+
+      function renderEnvTable(env) {
+        const rows = Object.entries(env).map(function (e) {
+          const val = escapeHtml(e[1]);
+          const cls = e[1] === '(미설정)' ? ' class="value-empty"' : '';
+          return '<tr><th>' + escapeHtml(e[0]) + '</th><td' + cls + '>' + val + '</td></tr>';
+        }).join('');
+        return '<table class="env-table"><tbody>' + rows + '</tbody></table>';
+      }
+
+      try {
+        const configRes = await fetch('/api/config');
+        if (configRes.ok) {
+          const configData = await configRes.json();
+          envContent.innerHTML = renderEnvTable(configData.env || {});
+        } else {
+          envContent.innerHTML = '<p class="message">환경 변수를 불러올 수 없습니다.</p>';
+        }
+      } catch (e) {
+        envContent.innerHTML = '<p class="error-msg">' + escapeHtml(e.message) + '</p>';
+      }
+
+      try {
+        const res = await fetch('/api/tables');
+        const text = await res.text();
+        let data;
+        try {
+          data = text ? JSON.parse(text) : {};
+        } catch (parseErr) {
+          statusDot.className = 'status-dot error';
+          statusText.textContent = '오류';
+          content.innerHTML = '<p class="error-msg">서버 응답을 읽을 수 없습니다. (JSON 아님)</p>';
+          return;
+        }
+
+        if (data.error && !data.tables) {
+          statusDot.className = 'status-dot error';
+          statusText.textContent = 'DB 미설정 또는 오류';
+          content.innerHTML = '<p class="error-msg">' + escapeHtml(data.error) + '</p>';
+          return;
+        }
+
+        statusDot.className = 'status-dot ok';
+        statusText.textContent = '연결됨';
+
+        if (data.tables && data.tables.length > 0) {
+          content.innerHTML = '<ul class="tables">' +
+            data.tables.map(function (name) { return '<li>' + escapeHtml(name) + '</li>'; }).join('') +
+            '</ul>';
+        } else {
+          content.innerHTML = '<p class="message">public 스키마에 테이블이 없습니다.</p>';
+        }
+      } catch (e) {
+        statusDot.className = 'status-dot error';
+        statusText.textContent = '오류';
+        content.innerHTML = '<p class="error-msg">' + escapeHtml(e.message) + '</p>';
+      }
+    })();
+
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
